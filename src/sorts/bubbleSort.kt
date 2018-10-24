@@ -1,38 +1,30 @@
 package sorts
 
 
-fun bubbleSort(a: IntArray) {
-    var n = a.size
-    do {
-        var n2 = 0
-        for (i in 1 until n) {
-            if (a[i - 1] > a[i]) {
-                val tmp = a[i]
-                a[i] = a[i - 1]
-                a[i - 1] = tmp
-                n2 = i
+fun bubbleSort(a: IntArray){
+    var n = a.size - 1
+    for(i in 0 until n ){
+        for (j in (n) downTo (i+1)){
+            if (a[j] < a[j-1]) {
+                a[j] = a[j - 1].also { a[j -1] = a[j] }
             }
         }
-        n = n2
-    } while (n != 0)
+    }
+
 }
 
 fun bubbleSortSwap(a: IntArray) {
-    var n = a.size
-    var s =0
-    do {
-        var n2 = 0
-        for (i in 1 until n) {
-            s = 0
-            if (a[i - 1] > a[i]) {
-                val tmp = a[i]
-                a[i] = a[i - 1]
-                a[i - 1] = tmp
-                n2 = i
-                s++
+    var n = a.size - 1
+
+    for(i in 0 until n ){
+       var swaps = 0
+        for (j in (n) downTo (i+1)){
+            if (a[j] < a[j-1]) {
+                a[j] = a[j - 1].also { a[j -1] = a[j] }
+                swaps++
             }
         }
-        if (s == 0) break
-        n = n2
-    } while (n != 0)
+        if (swaps == 0) break
+    }
+
 }

@@ -13,76 +13,67 @@ import kotlin.system.measureNanoTime
 
 //100, 1_000, 10_000
 //random, sorted, almost sorted
-
-val rand = Random()
 const val N = 10_000
-
-
-val sortedList10_000 = IntArray(10_000){ rand.nextInt( N ) }.sortedArray()
-val sortedList1_000 = IntArray(1_000){ rand.nextInt( N ) }.sortedArray()
-val sortedList100:IntArray = IntArray(100){ rand.nextInt( N ) }.sortedArray()
-val sortedList10:IntArray = IntArray(10){ rand.nextInt( N ) }.sortedArray()
-
-val randList10_000:IntArray = IntArray(10_000){ rand.nextInt( N ) }
-val randList1_000 = IntArray(1_000){ rand.nextInt( N ) }
-val randList100 = IntArray(100){ rand.nextInt( N ) }
-val randList10 = IntArray(10){ rand.nextInt( N ) }
-
-val nSList10_000: IntArray = sortedList10_000
-val nSList1_000: IntArray = sortedList1_000
-var nSList100:IntArray = sortedList100
-var nSList10:IntArray = sortedList10
-
-
-
 
 fun main(args: Array<String>) {
 
-    nSList100[5] = rand.nextInt(N)
-    for (i in 5..95 step 10) nSList100[i] = rand.nextInt(N)
-    for (i in 5..995 step 10) nSList1_000[i] = rand.nextInt(N)
-    for (i in 5..9995 step 10) nSList10_000[i] = rand.nextInt(N)
+    val rand = Random()
 
-    val seqs = listOf(sortedList10, sortedList100, sortedList1_000, sortedList10_000,
-            randList10, randList100, randList1_000, randList10_000,
-            nSList10, nSList100, nSList1_000, nSList10_000)
-
+    fun randomList( n: Int ) = IntArray( n ) {rand.nextInt( N ) }
+    fun sortedList(n:Int) = randomList(n).sorted().toIntArray()
+    fun nearlySortedList(n: Int):IntArray {
+        val list: IntArray = sortedList(n)
+        for (i in 5..n step 10) list[i] = rand.nextInt(N)
+        return list
+    }
+    val sizes = listOf(10, 100, 1_000, 2_000, 5_000, 7_500, 10_000)
+    val lists = listOf<(Int)->IntArray>( ::sortedList, ::nearlySortedList, ::randomList )
     val sorts = listOf<(IntArray) -> Unit>(
             ::bubbleSort, ::bubbleSortSwap, ::mergeSort, ::quickSort, ::selectionSort, ::insertionSort)
 
-    val avgTimes = List(sorts.size) { LongArray(seqs.size) }
+    val avgTimes = List(sorts.size) { List(lists.size) {LongArray(sizes.size) } }
 
-    for ((i, seq) in seqs.withIndex()) {
-        for ((k, sort) in sorts.withIndex()) {
-            var temp = 0L; var temp2 = 0L; var temp3 = 0L
+    //to compile sorts before timing, to 10 so that both overloaded mergeSort is compiled
+    for (sort in sorts) sort(IntArray(10){rand.nextInt(9)})
 
-            repeat(10) {
+    for ((sortIndex, sort) in sorts.withIndex()) {
+        for ((listIndex, list) in lists.withIndex()) {
+            for ((sizeIndex, size) in sizes.withIndex()) {
+                var temp = 0L; var temp2 = 0L; var temp3 = 0L //for avgs
+
+                //avg over 1000 in chunks to avoid overflow
                 repeat(10) {
                     repeat(10) {
-                         temp += measureNanoTime { sort(seq.copyOf()) }
+                        repeat(10) {
+                            //bind list before time starts
+                            val tempList = list(size)
+                            temp += measureNanoTime { sort( tempList ) }
+                        }
+                        temp2 += temp / 10
+                        temp = 0
                     }
-                    temp2 += temp/10
+                    temp3 += temp2 / 10
+                    temp2 = 0
                 }
-                temp3 += temp2 / 10
+                avgTimes[sortIndex][listIndex][sizeIndex] = temp3 / 10
             }
-            avgTimes[k][i] = temp3 / 10
-
         }
     }
     val sortNames = listOf("Bubble", "BubbleSwap", "Merge", "Quick", "Select", "Insert")
 
-    val arrayNames = listOf("sorted:", "random:", "nearly sorted:")
+    val listNames = listOf("sorted:", "nearly_sorted:", "random:")
 
-    print("Size:           ")
-    val sizes = listOf(10, 100, 1_000, 10_000)
-    for (size in sizes) print("%15d".format(size))
+    print("Size:           -")
+    for (size in sizes) print("%15d-".format(size))
     repeat(2) { println()}
-    for ((k, sortName) in sortNames.withIndex()) {
-        println("${sortName}")
-        for (i in 0..11) {
-            if  ( i % 4 == 0 )  print("%16s".format(arrayNames[i/4]))
-            print("%14d".format(avgTimes[k][i]/1000))
-            if ( i % 4 == 3 ) println()
+    for ((sortIndex, sortName) in sortNames.withIndex()) {
+        println("$sortName-")
+        for ((listIndex, listName) in listNames.withIndex()) {
+            print("%16s-".format(listName)) // "-" dash is for parsing into excel
+            for (sizeIndex in 0 until sizes.size ){
+                print("%14d-".format(avgTimes[sortIndex][listIndex][sizeIndex] / 1_000))
+            }
+            println()
         }
         println("\n")
     }
